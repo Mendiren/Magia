@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magiczna Przygoda AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-cinzel { font-family: 'Cinzel Decorative', cursive; }
+        #story-container::-webkit-scrollbar { width: 8px; }
+        #story-container::-webkit-scrollbar-track { background: #2d3748; }
+        #story-container::-webkit-scrollbar-thumb { background: #718096; border-radius: 4px; }
+        #story-container::-webkit-scrollbar-thumb:hover { background: #a0aec0; }
+        .ai-message { background-color: rgba(255, 255, 255, 0.05); border-left: 2px solid #a78bfa; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; }
+        .user-message { background-color: rgba(167, 139, 250, 0.1); text-align: right; border-right: 2px solid #facc15; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; }
+        .user-prefix { font-weight: 700; color: #facc15; }
+        .loader { width: 48px; height: 48px; border: 5px solid #FFF; border-bottom-color: #a78bfa; border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; }
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .modal { transition: opacity 0.25s ease; }
+        .modal-content { transition: transform 0.25s ease; }
+        .tab-btn.active { border-color: #facc15; background-color: #facc1520; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <div class="container mx-auto max-w-4xl h-screen flex flex-col p-2 sm:p-4">
+        <header class="text-center py-2 sm:py-4 border-b-2 border-violet-400 mb-4 flex justify-between items-center">
+             <button id="open-game-menu-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-3 rounded-lg transition-colors duration-300 text-sm">Zarządzaj</button>
+            <div>
+                <h1 class="text-2xl sm:text-4xl font-cinzel text-yellow-300">Magiczna Przygoda AI</h1>
+                <p class="text-violet-300 text-sm sm:text-base">Twoja historia pisana na żywo</p>
+            </div>
+            <button id="open-journal-btn" class="bg-violet-600 hover:bg-violet-700 text-white font-bold py-2 px-3 rounded-lg transition-colors duration-300 text-sm">Dziennik</button>
+        </header>
+
+        <main id="story-container" class="flex-1 overflow-y-auto p-4 bg-gray-800 rounded-lg shadow-inner"></main>
+
+        <footer class="mt-4">
+            <div id="loading-indicator" class="text-center hidden mb-2"><div class="loader mx-auto"></div><p class="text-violet-300 mt-2">AI tworzy dalszy ciąg historii...</p></div>
+            <div class="flex flex-col sm:flex-row items-center bg-gray-800 p-2 rounded-lg shadow-lg"><input type="text" id="user-input" placeholder="Wpisz swoją akcję..." class="w-full bg-gray-700 text-gray-200 rounded-md sm:rounded-l-md sm:rounded-r-none p-3 focus:outline-none focus:ring-2 focus:ring-violet-400 transition mb-2 sm:mb-0"><div class="flex w-full sm:w-auto"><button id="say-btn" class="action-btn flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 transition-colors duration-300 sm:rounded-none" title="Mów"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg></button><button id="do-btn" class="action-btn flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 transition-colors duration-300" title="Rób"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></button><button id="describe-btn" class="action-btn flex-1 bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-4 rounded-r-md sm:rounded-l-none" title="Opisz"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg></button></div></div>
+        </footer>
+    </div>
+    
+    <!-- Journal Modal -->
+    <div id="journal-modal" class="modal fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 hidden z-50">
+        <div class="modal-content bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col transform scale-95 opacity-0">
+            <div class="flex justify-between items-center p-4 border-b border-gray-700"><h2 class="text-2xl font-cinzel text-yellow-300">Dziennik</h2><button id="close-journal-btn" class="text-gray-400 hover:text-white">&times;</button></div>
+            <div class="border-b border-gray-700 flex text-sm sm:text-base"><button class="tab-btn flex-1 p-3 sm:p-4 border-b-2 border-transparent" data-tab="hero">Bohater</button><button class="tab-btn flex-1 p-3 sm:p-4 border-b-2 border-transparent" data-tab="characters">Postacie</button><button class="tab-btn flex-1 p-3 sm:p-4 border-b-2 border-transparent" data-tab="plot">Fabuła</button><button class="tab-btn flex-1 p-3 sm:p-4 border-b-2 border-transparent" data-tab="locations">Lokacje</button></div>
+            <div class="p-6 overflow-y-auto"><div id="hero-tab" class="tab-content hidden"></div><div id="characters-tab" class="tab-content hidden"></div><div id="plot-tab" class="tab-content hidden"></div><div id="locations-tab" class="tab-content hidden"></div></div>
+        </div>
+    </div>
+
+    <!-- Game Menu Modal -->
+    <div id="game-menu-modal" class="modal fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 hidden z-50">
+        <div class="modal-content bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col transform scale-95 opacity-0">
+            <div class="flex justify-between items-center p-4 border-b border-gray-700"><h2 class="text-2xl font-cinzel text-yellow-300">Zarządzaj Grą</h2><button id="close-game-menu-btn" class="text-gray-400 hover:text-white">&times;</button></div>
+            <div class="p-6 overflow-y-auto space-y-6">
+                <div><h3 class="text-lg font-bold text-yellow-300 mb-2">Zapisz bieżącą grę</h3><div class="flex gap-2"><input type="text" id="save-name-input" placeholder="Nazwa zapisu..." class="w-full bg-gray-700 text-gray-200 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-violet-400"><button id="save-game-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">Zapisz</button></div></div>
+                <div><h3 class="text-lg font-bold text-yellow-300 mb-2">Wczytaj grę</h3><div id="save-slots-container" class="space-y-2"></div></div>
+                <div><h3 class="text-lg font-bold text-yellow-300 mb-2">Nowa Gra</h3><button id="new-game-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Rozpocznij nową przygodę</button></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const storyContainer = document.getElementById('story-container');
+        const userInput = document.getElementById('user-input');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        
+        const apiKey = "";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+        const systemPrompt = `Jesteś Mistrzem Gry w interaktywnej grze przygodowej fantasy w stylu anime. Twoim zadaniem jest prowadzenie narracji, reagowanie na działania gracza i aktualizowanie stanu gry. Pisz w języku polskim. Utrzymuj ton przygody fantasy w stylu anime - może być epicko, czasem zabawnie, ale zawsze wciągająco. Gracz jest 15-letnim bohaterem o imieniu Ren.
+
+WAŻNE INFORMACJE O ŚWIECIE GRY - HIERARCHIA MOCY:
+- **Pierwsza Próba (15 lat):** Wynik od 1 do 50 mocy. Wynik powyżej 50 jest uważany za wyjątkowy.
+- **Akademie Magii:**
+    - **Królewska Akademia:** Rekrutuje od 15 lat, wymaga minimum 50 mocy. Absolwenci osiągają nawet 400 mocy.
+    - **Prestiżowe Akademie:** Wymagają minimum 25 mocy. Absolwenci osiągają do 300 mocy.
+    - **Słabsze Akademie:** Przyjmują każdego. Absolwenci osiągają do 200 mocy.
+- **Zwykli Ludzie:** Starsze, nietrenujące magii osoby rzadko przekraczają 100 mocy.
+- **Doświadczeni Magowie:** Poprzez pracę i przygody, magowie mogą osiągnąć 500-550 mocy.
+- **SEKRETNA PIĄTKA:** Elita magów, wszyscy są absolwentami Królewskiej Akademii. Ich moc przekracza 700. Plotki głoszą, że lider ma prawie 800 mocy.
+- **Limity Mocy:** Maksymalny teoretyczny poziom to 1000, ale nikt go nigdy nie osiągnął. Najwyższy zanotowany w historii poziom mocy to 899.
+
+INSTRUKCJE AKTUALIZACJI DZIENNIKA:
+- Kiedy wprowadzasz nową postać, kluczowy punkt fabularny, nową lokację, lub gdy zmieniają się statystyki gracza, musisz na końcu swojej odpowiedzi dodać specjalny blok JSON w formacie [JOURNAL_UPDATE]{"type": "...", "data": {...}}[/JOURNAL_UPDATE].
+- Twoim absolutnym priorytetem jest unikanie duplikatów. Bądź BARDZO ostrożny. Zanim dodasz nową postać lub lokację, przeanalizuj kontekst. Jeśli postać znana tylko z roli (np. 'Matka Rena') otrzyma imię (np. 'Lira'), MUSISZ zaktualizować oryginalny wpis, zmieniając jego nazwę na 'Lira' i łącząc informacje. NIE TWORZYSZ nowego wpisu. To samo dotyczy lokacji ('dom Rena' i 'Domek Rena' to to samo).
+- NIGDY nie pokazuj swojego procesu myślowego ani żadnego tekstu w nawiasach kwadratowych jak [THOUGHT]. Twoja odpowiedź musi być wyłącznie narracją i opcjonalnym blokiem [JOURNAL_UPDATE].
+- Wartości w JSON muszą być poprawnymi stringami, liczbami lub booleanami. Nigdy nie używaj wartości 'undefined' ani null.
+- Przykład: [JOURNAL_UPDATE]{"type":"character","data":{"name":"Elara","description":"Twoja najlepsza przyjaciółka.","relation":"Przyjaciel","power":12,"rank":"Uczeń"}}[/JOURNAL_UPDATE]. Zawsze kontynuuj narrację na podstawie akcji gracza.`;
+        
+        const defaultGameState = {
+            chatHistory: [],
+            stats: { name: "Ren", power: 9, title: 'Nieobudzony', globalRank: '2,14 Mld', ageRank: '89,45 Mln' },
+            journal: {
+                characters: [{ name: "Starszy Mag", description: "Opiekun Kuli w miasteczku Aethel. Wydaje się być życzliwy.", relation: "Neutralny", power: null, rank: null }],
+                plotPoints: [{ point: "Osiągnąłeś wiek 15 lat i po raz pierwszy zmierzyłeś swoją moc magiczną." }],
+                locations: [{ name: "Aethel", description: "Twoje rodzinne, tętniące życiem miasteczko.", isCurrent: true, parent: null }]
+            }
+        };
+        let gameState;
+        let currentSaveName = "current_game";
+
+        function getSaves() {
+            return JSON.parse(localStorage.getItem('magicAdventureSaves')) || { saves: {}, lastPlayed: null };
+        }
+
+        function saveSaves(savesData) {
+            localStorage.setItem('magicAdventureSaves', JSON.stringify(savesData));
+        }
+
+        function loadGame(saveName) {
+            const allSaves = getSaves();
+            if (allSaves.saves[saveName]) {
+                gameState = JSON.parse(JSON.stringify(allSaves.saves[saveName])); // Deep copy
+                currentSaveName = saveName;
+                allSaves.lastPlayed = saveName;
+                saveSaves(allSaves);
+                rebuildUIFromState();
+                return true;
+            }
+            return false;
+        }
+        
+        function saveCurrentGame(saveName) {
+            if (!saveName || saveName.trim() === "") return;
+            const allSaves = getSaves();
+            allSaves.saves[saveName] = JSON.parse(JSON.stringify(gameState)); // Deep copy
+            allSaves.lastPlayed = saveName;
+            currentSaveName = saveName;
+            saveSaves(allSaves);
+        }
+
+        function startNewGame() {
+            gameState = JSON.parse(JSON.stringify(defaultGameState));
+            const allSaves = getSaves();
+            allSaves.lastPlayed = null; // Unset last played so next load starts fresh
+            currentSaveName = "new_game_" + Date.now();
+            saveSaves(allSaves);
+            initializeNewGameUI();
+        }
+
+        function initializeNewGameUI() {
+            const initialStory = `Masz 15 lat. Dzień, na który czekałeś całe życie, wreszcie nadszedł... Dziś jest Dzień próby. Z drżącymi dłońmi podchodzisz i kładziesz je na chłodnej powierzchni magicznej kuli.`;
+            const initialRanking = `Kula rozbłyska... a nad nią pojawiają się świetliste runy: **Poziom Mocy:** 9, **Tytuł:** Nieobudzony, **Ranking Globalny:** 2,147,385,921, **Ranking Wiek:** 89,452,103. W tłumie przebiega cichy szmer. Starszy Mag spogląda na ciebie z łagodnym, zachęcającym uśmiechem. "Każda wielka podróż zaczyna się od pierwszego kroku, Ren," mówi cicho. "Teraz twoja historia naprawdę się rozpoczyna." Stoisz na środku placu. Co robisz?`;
+            gameState.chatHistory.push({ role: "model", parts: [{ text: initialStory }]});
+            gameState.chatHistory.push({ role: "model", parts: [{ text: initialRanking }]});
+            rebuildUIFromState();
+        }
+
+        function initialLoad() {
+            const allSaves = getSaves();
+            const lastPlayed = allSaves.lastPlayed;
+            if (lastPlayed && allSaves.saves[lastPlayed]) {
+                loadGame(lastPlayed);
+            } else {
+                startNewGame();
+            }
+        }
+
+        function rebuildUIFromState() {
+            storyContainer.innerHTML = '';
+            gameState.chatHistory.forEach(entry => {
+                addMessageToStory(entry.parts[0].text, entry.role === 'user' ? 'user' : 'ai', false);
+            });
+            storyContainer.scrollTop = storyContainer.scrollHeight;
+        }
+        
+        function addMessageToStory(text, sender, shouldScroll = true) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = sender === 'user' ? 'user-message' : 'ai-message';
+            if (sender === 'user') {
+                const parts = text.split(':');
+                messageDiv.innerHTML = `<span class="user-prefix">${parts[0]}:</span> ${parts.slice(1).join(':').trim()}`;
+            } else {
+                messageDiv.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            }
+            storyContainer.appendChild(messageDiv);
+            if (shouldScroll) storyContainer.scrollTop = storyContainer.scrollHeight;
+        }
+        
+        function updateGameStateFromJournal(updateData) {
+            const { type, data } = updateData;
+            switch(type) {
+                case 'character':
+                    if (!data.name) break;
+                    data.relation = data.relation || "Nieznany";
+
+                    let charIndex = gameState.journal.characters.findIndex(c => c.name.trim().toLowerCase() === data.name.trim().toLowerCase());
+
+                    if (charIndex === -1 && (data.relation === 'Matka' || data.relation === 'Ojciec')) {
+                        const roleIndex = gameState.journal.characters.findIndex(c => c.relation === data.relation);
+                        if (roleIndex > -1) {
+                            charIndex = roleIndex; 
+                        }
+                    }
+
+                    if (charIndex > -1) {
+                        gameState.journal.characters[charIndex] = {...gameState.journal.characters[charIndex], ...data};
+                    } else {
+                        gameState.journal.characters.push(data);
+                    }
+                    break;
+                case 'plot':
+                    if (data.point) {
+                       gameState.journal.plotPoints.push(data);
+                    }
+                    break;
+                case 'location':
+                     if (!data.name) break;
+                    const locIndex = gameState.journal.locations.findIndex(l => l.name.trim().toLowerCase() === data.name.trim().toLowerCase());
+                     if (data.isCurrent) gameState.journal.locations.forEach(l => l.isCurrent = false);
+                    if (locIndex > -1) {
+                        gameState.journal.locations[locIndex] = {...gameState.journal.locations[locIndex], ...data};
+                    } else {
+                        gameState.journal.locations.push(data);
+                    }
+                    break;
+                case 'stats':
+                    gameState.stats = {...gameState.stats, ...data};
+                    break;
+            }
+        }
+
+        async function getAIResponse() {
+            loadingIndicator.classList.remove('hidden');
+            setInputsDisabled(true);
+            try {
+                const payload = { contents: gameState.chatHistory, systemInstruction: { parts: [{ text: systemPrompt }] } };
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const result = await response.json();
+                let aiText = result.candidates?.[0]?.content?.parts?.[0]?.text || "Przepraszam, ale nie udało mi się wygenerować odpowiedzi.";
+
+                const thoughtRegex = /\[THOUGHT\][\s\S]*$/;
+                aiText = aiText.replace(thoughtRegex, '').trim();
+
+                const journalRegex = /\[JOURNAL_UPDATE\]([\s\S]*?)\[\/JOURNA\s*L_UPDATE\]/g;
+                aiText.match(journalRegex)?.forEach(match => {
+                    try {
+                        const jsonStr = match.replace(/\[JOURNAL_UPDATE\]|\[\/JOURNA\s*L_UPDATE\]/g, '');
+                        const jsonData = JSON.parse(jsonStr);
+                        updateGameStateFromJournal(jsonData);
+                    } catch (e) { console.error("Failed to parse journal JSON:", e, match); }
+                });
+                aiText = aiText.replace(journalRegex, '').trim();
+
+                addMessageToStory(aiText, 'ai');
+                gameState.chatHistory.push({ role: "model", parts: [{ text: aiText }] });
+            } catch (error) {
+                console.error("Error calling Gemini API:", error);
+                addMessageToStory("Wystąpił błąd podczas komunikacji z AI.", 'ai');
+            } finally {
+                loadingIndicator.classList.add('hidden');
+                setInputsDisabled(false);
+                userInput.focus();
+            }
+        }
+        
+        function setInputsDisabled(disabled) {
+            userInput.disabled = disabled;
+            document.querySelectorAll('.action-btn').forEach(btn => { btn.disabled = disabled; btn.classList.toggle('opacity-50', disabled); btn.classList.toggle('cursor-not-allowed', disabled); });
+        }
+        
+        function handleUserAction(prefix) {
+            const text = userInput.value.trim();
+            if (text === '' || userInput.disabled) return;
+            const fullText = `${prefix}: ${text}`;
+            addMessageToStory(fullText, 'user');
+            gameState.chatHistory.push({ role: "user", parts: [{ text: fullText }] });
+            userInput.value = '';
+            getAIResponse();
+        }
+        
+        ['say-btn', 'do-btn', 'describe-btn'].forEach(id => {
+            const prefix = id === 'say-btn' ? 'Mówię' : id === 'do-btn' ? 'Robię' : 'Opisuję';
+            document.getElementById(id).addEventListener('click', () => handleUserAction(prefix));
+        });
+        userInput.addEventListener('keydown', e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleUserAction('Robię')));
+
+        // --- Modals Logic ---
+        function setupModal(modalId, openBtnId, closeBtnId) {
+            const modal = document.getElementById(modalId);
+            const openBtn = document.getElementById(openBtnId);
+            const closeBtn = document.getElementById(closeBtnId);
+            const modalContent = modal.querySelector('.modal-content');
+
+            openBtn.addEventListener('click', () => {
+                modal.classList.remove('hidden');
+                setTimeout(() => modalContent.classList.remove('scale-95', 'opacity-0'), 10);
+            });
+            closeBtn.addEventListener('click', () => {
+                modalContent.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => modal.classList.add('hidden'), 250);
+            });
+            return modal;
+        }
+
+        // Journal Modal
+        const journalModal = setupModal('journal-modal', 'open-journal-btn', 'close-journal-btn');
+        document.getElementById('open-journal-btn').addEventListener('click', renderJournal);
+        
+        document.querySelectorAll('.tab-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+                document.getElementById(button.dataset.tab + '-tab').classList.remove('hidden');
+            });
+        });
+
+        function renderJournal() {
+            const { characters, plotPoints, locations } = gameState.journal;
+            const { name, power, title, globalRank, ageRank } = gameState.stats;
+            
+            // Render Hero Tab
+            document.getElementById('hero-tab').innerHTML = `
+                <div class="grid grid-cols-2 gap-4 text-center">
+                    <div class="bg-gray-700/50 p-4 rounded-lg col-span-2">
+                        <p class="text-sm text-violet-300 uppercase tracking-wider">Imię</p>
+                        <p class="text-3xl font-bold text-yellow-300">${name}</p>
+                    </div>
+                     <div class="bg-gray-700/50 p-4 rounded-lg">
+                        <p class="text-sm text-violet-300 uppercase tracking-wider">Poziom Mocy</p>
+                        <p class="text-3xl font-bold text-yellow-300">${power}</p>
+                    </div>
+                     <div class="bg-gray-700/50 p-4 rounded-lg">
+                        <p class="text-sm text-violet-300 uppercase tracking-wider">Tytuł</p>
+                        <p class="text-3xl font-bold text-yellow-300">${title}</p>
+                    </div>
+                     <div class="bg-gray-700/50 p-4 rounded-lg">
+                        <p class="text-sm text-violet-300 uppercase tracking-wider">Ranking Globalny</p>
+                        <p class="text-3xl font-bold text-yellow-300">${globalRank}</p>
+                    </div>
+                     <div class="bg-gray-700/50 p-4 rounded-lg">
+                        <p class="text-sm text-violet-300 uppercase tracking-wider">Ranking Wieku</p>
+                        <p class="text-3xl font-bold text-yellow-300">${ageRank}</p>
+                    </div>
+                </div>
+            `;
+            
+            // Render Characters Tab
+            document.getElementById('characters-tab').innerHTML = characters.map(c => {
+                let statsHTML = '';
+                if (c.power || c.rank) {
+                    statsHTML += '<p class="text-sm text-violet-300">';
+                    if (c.power) statsHTML += `Moc: <strong>${c.power}</strong>`;
+                    if (c.power && c.rank) statsHTML += ' | ';
+                    if (c.rank) statsHTML += `Ranga: <strong>${c.rank}</strong>`;
+                    statsHTML += '</p>';
+                }
+                return `<div class="mb-4 pb-4 border-b border-gray-700">
+                            <h3 class="text-xl text-yellow-300">${c.name}</h3>
+                            ${statsHTML}
+                            <p class="text-gray-400 italic mt-1">Relacja: ${c.relation}</p>
+                            <p class="mt-2">${c.description}</p>
+                        </div>`;
+            }).join('') || '<p>Nie spotkałeś jeszcze żadnych postaci.</p>';
+
+            // Render Plot Tab
+            document.getElementById('plot-tab').innerHTML = `<ul class="list-disc list-inside space-y-2">${plotPoints.map(p => `<li>${p.point}</li>`).join('')}</ul>` || '<p>Historia jeszcze się nie rozpoczęła.</p>';
+            
+            // Render Locations Tab
+            const currentLoc = locations.find(l => l.isCurrent);
+            const parentLoc = currentLoc && currentLoc.parent ? locations.find(l => l.name === currentLoc.parent) : null;
+            let locationsHTML = `<h3 class="text-xl text-yellow-300 mb-2">Obecna Lokacja</h3>`;
+            if (currentLoc) {
+                locationsHTML += `<p class="text-lg">Jesteś w: <strong>${currentLoc.name}</strong>` + (parentLoc ? ` (w: <strong>${parentLoc.name}</strong>)` : ``) + `</p>`;
+            } else {
+                locationsHTML += `<p>Nieznana lokacja.</p>`;
+            }
+            locationsHTML += `<h3 class="text-xl text-yellow-300 mt-6 mb-2">Odwiedzone Miejsca</h3>`;
+            locationsHTML += locations.map(l => `<div class="mb-2"><p class="text-lg">${l.name}</p><p class="text-sm text-gray-400">${l.description}</p></div>`).join('');
+            document.getElementById('locations-tab').innerHTML = locationsHTML;
+
+            document.querySelector('.tab-btn[data-tab="hero"]').click();
+        }
+
+        // Game Menu Modal
+        const gameMenuModal = setupModal('game-menu-modal', 'open-game-menu-btn', 'close-game-menu-btn');
+        document.getElementById('open-game-menu-btn').addEventListener('click', renderSaveSlots);
+        
+        function renderSaveSlots() {
+            const container = document.getElementById('save-slots-container');
+            const allSaves = getSaves();
+            const saves = allSaves.saves;
+            container.innerHTML = '';
+            if (Object.keys(saves).length === 0) {
+                container.innerHTML = '<p class="text-gray-400">Brak zapisanych gier.</p>';
+                return;
+            }
+            Object.keys(saves).forEach(name => {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center bg-gray-700 p-2 rounded';
+                div.innerHTML = `
+                    <span>${name}</span>
+                    <div class="flex gap-2">
+                        <button class="load-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded" data-savename="${name}">Wczytaj</button>
+                        <button class="delete-btn bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded" data-savename="${name}">Usuń</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        document.getElementById('save-slots-container').addEventListener('click', e => {
+            const saveName = e.target.dataset.savename;
+            if (!saveName) return;
+            if (e.target.classList.contains('load-btn')) {
+                loadGame(saveName);
+                gameMenuModal.querySelector('.modal-content').classList.add('scale-95', 'opacity-0');
+                setTimeout(() => gameMenuModal.classList.add('hidden'), 250);
+            } else if (e.target.classList.contains('delete-btn')) {
+                if (confirm(`Czy na pewno chcesz usunąć zapis "${saveName}"?`)) {
+                    const allSaves = getSaves();
+                    delete allSaves.saves[saveName];
+                    saveSaves(allSaves);
+                    renderSaveSlots();
+                }
+            }
+        });
+
+        document.getElementById('save-game-btn').addEventListener('click', () => {
+            const input = document.getElementById('save-name-input');
+            const name = input.value.trim();
+            if (name) {
+                saveCurrentGame(name);
+                renderSaveSlots();
+                input.value = '';
+            }
+        });
+        
+        document.getElementById('new-game-btn').addEventListener('click', () => {
+            if (confirm("Czy na pewno chcesz rozpocząć nową grę? Niezapisane postępy w obecnej grze zostaną utracone.")) {
+                startNewGame();
+                gameMenuModal.querySelector('.modal-content').classList.add('scale-95', 'opacity-0');
+                setTimeout(() => gameMenuModal.classList.add('hidden'), 250);
+            }
+        });
+
+        initialLoad();
+    </script>
+</body>
+</html>
+
