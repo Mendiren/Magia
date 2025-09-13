@@ -59,6 +59,14 @@
         <div class="modal-content bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col transform scale-95 opacity-0">
             <div class="flex justify-between items-center p-4 border-b border-gray-700"><h2 class="text-2xl font-cinzel text-yellow-300">Zarządzaj Grą</h2><button id="close-game-menu-btn" class="text-gray-400 hover:text-white">&times;</button></div>
             <div class="p-6 overflow-y-auto space-y-6">
+                <div>
+                    <h3 class="text-lg font-bold text-yellow-300 mb-2">Klucz API Gemini</h3>
+                    <p class="text-sm text-gray-400 mb-2">Wprowadź swój klucz API z Google AI Studio, aby gra mogła działać. Klucz zostanie zapisany w Twojej przeglądarce.</p>
+                    <div class="flex gap-2">
+                        <input type="password" id="api-key-input" placeholder="Wprowadź klucz API..." class="w-full bg-gray-700 text-gray-200 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-violet-400">
+                        <button id="save-api-key-btn" class="bg-violet-600 hover:bg-violet-700 text-white font-bold py-2 px-4 rounded-lg">Zapisz</button>
+                    </div>
+                </div>
                 <div><h3 class="text-lg font-bold text-yellow-300 mb-2">Zapisz bieżącą grę</h3><div class="flex gap-2"><input type="text" id="save-name-input" placeholder="Nazwa zapisu..." class="w-full bg-gray-700 text-gray-200 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-violet-400"><button id="save-game-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">Zapisz</button></div></div>
                 <div><h3 class="text-lg font-bold text-yellow-300 mb-2">Wczytaj grę</h3><div id="save-slots-container" class="space-y-2"></div></div>
                 <div><h3 class="text-lg font-bold text-yellow-300 mb-2">Nowa Gra</h3><button id="new-game-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Rozpocznij nową przygodę</button></div>
@@ -71,8 +79,7 @@
         const userInput = document.getElementById('user-input');
         const loadingIndicator = document.getElementById('loading-indicator');
         
-        const apiKey = "";
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+        let apiKey = "";
 
         const systemPrompt = `Jesteś Mistrzem Gry w interaktywnej grze przygodowej fantasy w stylu anime. Twoim zadaniem jest prowadzenie narracji, reagowanie na działania gracza i aktualizowanie stanu gry. Pisz w języku polskim. Utrzymuj ton przygody fantasy w stylu anime - może być epicko, czasem zabawnie, ale zawsze wciągająco. Gracz jest 15-letnim bohaterem o imieniu Ren.
 
@@ -88,7 +95,8 @@ WAŻNE INFORMACJE O ŚWIECIE GRY - HIERARCHIA MOCY:
 - **Limity Mocy:** Maksymalny teoretyczny poziom to 1000, ale nikt go nigdy nie osiągnął. Najwyższy zanotowany w historii poziom mocy to 899.
 
 INSTRUKCJE AKTUALIZACJI DZIENNIKA:
-- Kiedy wprowadzasz nową postać, kluczowy punkt fabularny, nową lokację, lub gdy zmieniają się statystyki gracza, musisz na końcu swojej odpowiedzi dodać specjalny blok JSON w formacie [JOURNAL_UPDATE]{"type": "...", "data": {...}}[/JOURNAL_UPDATE].
+- Nigdy nie dodawaj postaci o imieniu 'Ren' do dziennika postaci. Statystyki Rena są zarządzane osobno.
+- Kiedy wprowadzasz nową postać, kluczowy punkt fabularny, nową lokację, lub gdy zmieniają się statystyki gracza (TYLKO DLA RENA), musisz na końcu swojej odpowiedzi dodać specjalny blok JSON w formacie [JOURNAL_UPDATE]{"type": "...", "data": {...}}[/JOURNAL_UPDATE].
 - Twoim absolutnym priorytetem jest unikanie duplikatów. Bądź BARDZO ostrożny. Zanim dodasz nową postać lub lokację, przeanalizuj kontekst. Jeśli postać znana tylko z roli (np. 'Matka Rena') otrzyma imię (np. 'Lira'), MUSISZ zaktualizować oryginalny wpis, zmieniając jego nazwę na 'Lira' i łącząc informacje. NIE TWORZYSZ nowego wpisu. To samo dotyczy lokacji ('dom Rena' i 'Domek Rena' to to samo).
 - NIGDY nie pokazuj swojego procesu myślowego ani żadnego tekstu w nawiasach kwadratowych jak [THOUGHT]. Twoja odpowiedź musi być wyłącznie narracją i opcjonalnym blokiem [JOURNAL_UPDATE].
 - Wartości w JSON muszą być poprawnymi stringami, liczbami lub booleanami. Nigdy nie używaj wartości 'undefined' ani null.
@@ -112,6 +120,15 @@ INSTRUKCJE AKTUALIZACJI DZIENNIKA:
 
         function saveSaves(savesData) {
             localStorage.setItem('magicAdventureSaves', JSON.stringify(savesData));
+        }
+
+        function getApiKey() {
+            return localStorage.getItem('magicAdventureApiKey') || "";
+        }
+
+        function saveApiKey(key) {
+            localStorage.setItem('magicAdventureApiKey', key);
+            apiKey = key;
         }
 
         function loadGame(saveName) {
@@ -138,10 +155,9 @@ INSTRUKCJE AKTUALIZACJI DZIENNIKA:
 
         function startNewGame() {
             gameState = JSON.parse(JSON.stringify(defaultGameState));
-            const allSaves = getSaves();
-            allSaves.lastPlayed = null; // Unset last played so next load starts fresh
-            currentSaveName = "new_game_" + Date.now();
-            saveSaves(allSaves);
+            const saveName = "Pierwszy";
+            currentSaveName = saveName;
+            saveCurrentGame(saveName);
             initializeNewGameUI();
         }
 
@@ -188,7 +204,9 @@ INSTRUKCJE AKTUALIZACJI DZIENNIKA:
             const { type, data } = updateData;
             switch(type) {
                 case 'character':
-                    if (!data.name) break;
+                    if (!data.name || data.name.trim().toLowerCase() === gameState.stats.name.trim().toLowerCase()) {
+                        break; // Do not add hero to character list
+                    }
                     data.relation = data.relation || "Nieznany";
 
                     let charIndex = gameState.journal.characters.findIndex(c => c.name.trim().toLowerCase() === data.name.trim().toLowerCase());
@@ -228,12 +246,28 @@ INSTRUKCJE AKTUALIZACJI DZIENNIKA:
         }
 
         async function getAIResponse() {
+            if (!apiKey) {
+                addMessageToStory("Błąd: Brak klucza API. Proszę, wprowadź swój klucz API z Google AI Studio w menu 'Zarządzaj grą'.", 'ai');
+                loadingIndicator.classList.add('hidden');
+                setInputsDisabled(false);
+                return;
+            }
+
             loadingIndicator.classList.remove('hidden');
             setInputsDisabled(true);
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
             try {
                 const payload = { contents: gameState.chatHistory, systemInstruction: { parts: [{ text: systemPrompt }] } };
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                if (!response.ok) {
+                    if (response.status === 400 || response.status === 403) {
+                         throw new Error(`Błąd autoryzacji (status: ${response.status}). Sprawdź, czy Twój klucz API jest poprawny.`);
+                    }
+                    throw new Error(`Błąd sieci! Status: ${response.status}`);
+                }
+                
                 const result = await response.json();
                 let aiText = result.candidates?.[0]?.content?.parts?.[0]?.text || "Przepraszam, ale nie udało mi się wygenerować odpowiedzi.";
 
@@ -254,11 +288,12 @@ INSTRUKCJE AKTUALIZACJI DZIENNIKA:
                 gameState.chatHistory.push({ role: "model", parts: [{ text: aiText }] });
             } catch (error) {
                 console.error("Error calling Gemini API:", error);
-                addMessageToStory("Wystąpił błąd podczas komunikacji z AI.", 'ai');
+                addMessageToStory(`Wystąpił błąd podczas komunikacji z AI. (${error.message})`, 'ai');
             } finally {
                 loadingIndicator.classList.add('hidden');
                 setInputsDisabled(false);
                 userInput.focus();
+                saveCurrentGame(currentSaveName); // Autosave after every turn.
             }
         }
         
@@ -441,6 +476,21 @@ INSTRUKCJE AKTUALIZACJI DZIENNIKA:
                 gameMenuModal.querySelector('.modal-content').classList.add('scale-95', 'opacity-0');
                 setTimeout(() => gameMenuModal.classList.add('hidden'), 250);
             }
+        });
+
+        const apiKeyInput = document.getElementById('api-key-input');
+        apiKey = getApiKey();
+        if (apiKey) {
+            apiKeyInput.value = apiKey;
+        }
+
+        document.getElementById('save-api-key-btn').addEventListener('click', () => {
+            const key = apiKeyInput.value.trim();
+            saveApiKey(key);
+            const saveBtn = document.getElementById('save-api-key-btn');
+            const originalText = saveBtn.textContent;
+            saveBtn.textContent = 'Zapisano!';
+            setTimeout(() => { saveBtn.textContent = originalText; }, 2000);
         });
 
         initialLoad();
