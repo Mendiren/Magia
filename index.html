@@ -95,6 +95,7 @@ WAŻNE INFORMACJE O ŚWIECIE GRY - HIERARCHIA MOCY:
 - **Limity Mocy:** Maksymalny teoretyczny poziom to 1000, ale nikt go nigdy nie osiągnął. Najwyższy zanotowany w historii poziom mocy to 899.
 
 INSTRUKCJE AKTUALIZACJI DZIENNIKA:
+- System rankingu został usunięty. Zamiast tego, nadawaj graczowi coraz potężniejsze i ciekawsze tytuły, które odzwierciedlają jego poziom mocy i dokonania w fabule. Przykłady: 'Iskra', 'Uczeń Żywiołów', 'Pogromca Goblinów', 'Obrońca Aethel', 'Mag Bitewny'. Tytuł początkowy to 'Nieobudzony'.
 - Nigdy nie dodawaj postaci o imieniu 'Ren' do dziennika postaci. Statystyki Rena są zarządzane osobno.
 - Kiedy wprowadzasz nową postać, kluczowy punkt fabularny, nową lokację, lub gdy zmieniają się statystyki gracza (TYLKO DLA RENA), musisz na końcu swojej odpowiedzi dodać specjalny blok JSON w formacie [JOURNAL_UPDATE]{"type": "...", "data": {...}}[/JOURNAL_UPDATE].
 - Twoim absolutnym priorytetem jest unikanie duplikatów. Bądź BARDZO ostrożny. Zanim dodasz nową postać lub lokację, przeanalizuj kontekst. Jeśli postać znana tylko z roli (np. 'Matka Rena') otrzyma imię (np. 'Lira'), MUSISZ zaktualizować oryginalny wpis, zmieniając jego nazwę na 'Lira' i łącząc informacje. NIE TWORZYSZ nowego wpisu. To samo dotyczy lokacji ('dom Rena' i 'Domek Rena' to to samo).
@@ -104,7 +105,7 @@ INSTRUKCJE AKTUALIZACJI DZIENNIKA:
         
         const defaultGameState = {
             chatHistory: [],
-            stats: { name: "Ren", power: 9, title: 'Nieobudzony', globalRank: '2,14 Mld', ageRank: '89,45 Mln' },
+            stats: { name: "Ren", power: 9, title: 'Nieobudzony' },
             journal: {
                 characters: [{ name: "Starszy Mag", description: "Opiekun Kuli w miasteczku Aethel. Wydaje się być życzliwy.", relation: "Neutralny", power: null, rank: null }],
                 plotPoints: [{ point: "Osiągnąłeś wiek 15 lat i po raz pierwszy zmierzyłeś swoją moc magiczną." }],
@@ -163,7 +164,7 @@ INSTRUKCJE AKTUALIZACJI DZIENNIKA:
 
         function initializeNewGameUI() {
             const initialStory = `Masz 15 lat. Dzień, na który czekałeś całe życie, wreszcie nadszedł... Dziś jest Dzień próby. Z drżącymi dłońmi podchodzisz i kładziesz je na chłodnej powierzchni magicznej kuli.`;
-            const initialRanking = `Kula rozbłyska... a nad nią pojawiają się świetliste runy: **Poziom Mocy:** 9, **Tytuł:** Nieobudzony, **Ranking Globalny:** 2,147,385,921, **Ranking Wiek:** 89,452,103. W tłumie przebiega cichy szmer. Starszy Mag spogląda na ciebie z łagodnym, zachęcającym uśmiechem. "Każda wielka podróż zaczyna się od pierwszego kroku, Ren," mówi cicho. "Teraz twoja historia naprawdę się rozpoczyna." Stoisz na środku placu. Co robisz?`;
+            const initialRanking = `Kula rozbłyska... a nad nią pojawiają się świetliste runy: **Poziom Mocy:** 9, **Tytuł:** Nieobudzony. W tłumie przebiega cichy szmer. Starszy Mag spogląda na ciebie z łagodnym, zachęcającym uśmiechem. "Każda wielka podróż zaczyna się od pierwszego kroku, Ren," mówi cicho. "Teraz twoja historia naprawdę się rozpoczyna." Stoisz na środku placu. Co robisz?`;
             gameState.chatHistory.push({ role: "model", parts: [{ text: initialStory }]});
             gameState.chatHistory.push({ role: "model", parts: [{ text: initialRanking }]});
             rebuildUIFromState();
@@ -351,30 +352,22 @@ INSTRUKCJE AKTUALIZACJI DZIENNIKA:
 
         function renderJournal() {
             const { characters, plotPoints, locations } = gameState.journal;
-            const { name, power, title, globalRank, ageRank } = gameState.stats;
+            const { name, power, title } = gameState.stats;
             
             // Render Hero Tab
             document.getElementById('hero-tab').innerHTML = `
-                <div class="grid grid-cols-2 gap-4 text-center">
-                    <div class="bg-gray-700/50 p-4 rounded-lg col-span-2">
+                <div class="space-y-4 text-center">
+                    <div class="bg-gray-700/50 p-4 rounded-lg">
                         <p class="text-sm text-violet-300 uppercase tracking-wider">Imię</p>
                         <p class="text-3xl font-bold text-yellow-300">${name}</p>
-                    </div>
-                     <div class="bg-gray-700/50 p-4 rounded-lg">
-                        <p class="text-sm text-violet-300 uppercase tracking-wider">Poziom Mocy</p>
-                        <p class="text-3xl font-bold text-yellow-300">${power}</p>
                     </div>
                      <div class="bg-gray-700/50 p-4 rounded-lg">
                         <p class="text-sm text-violet-300 uppercase tracking-wider">Tytuł</p>
                         <p class="text-3xl font-bold text-yellow-300">${title}</p>
                     </div>
                      <div class="bg-gray-700/50 p-4 rounded-lg">
-                        <p class="text-sm text-violet-300 uppercase tracking-wider">Ranking Globalny</p>
-                        <p class="text-3xl font-bold text-yellow-300">${globalRank}</p>
-                    </div>
-                     <div class="bg-gray-700/50 p-4 rounded-lg">
-                        <p class="text-sm text-violet-300 uppercase tracking-wider">Ranking Wieku</p>
-                        <p class="text-3xl font-bold text-yellow-300">${ageRank}</p>
+                        <p class="text-sm text-violet-300 uppercase tracking-wider">Poziom Mocy</p>
+                        <p class="text-5xl font-bold text-yellow-300">${power}</p>
                     </div>
                 </div>
             `;
