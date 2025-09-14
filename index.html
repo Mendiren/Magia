@@ -46,6 +46,17 @@
                          {{ isReady ? 'Dołącz do Gry' : 'Łączenie...' }}
                     </button>
                 </div>
+                 <div class="pt-4 space-y-2">
+                    <label for="api-key-input" class="block text-sm font-medium text-gray-400">Klucz API Gemini</label>
+                    <input type="password" id="api-key-input" v-model="apiKey" placeholder="Wprowadź klucz API..." class="w-full bg-gray-700 text-gray-200 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-violet-400">
+                    <details class="text-sm">
+                        <summary class="cursor-pointer text-violet-300">Konfiguracja Firebase</summary>
+                        <div class="p-2 bg-gray-900/50 rounded-md mt-2 space-y-2">
+                            <textarea v-model="firebaseConfig" rows="4" placeholder="Wklej tutaj JSON konfiguracji Firebase..." class="w-full text-xs bg-gray-700 rounded p-1"></textarea>
+                             <p class="text-xs text-gray-400">Potrzebne, aby gra mogła zapisywać postępy online.</p>
+                        </div>
+                    </details>
+                </div>
             </div>
             <p v-if="error" class="text-red-400 mt-4 text-center">{{ error }}</p>
         </div>
@@ -183,16 +194,8 @@ Przykład aktualizacji Dziennika:
             setup() {
                 // State
                 const gameState = ref('session');
-                const apiKey = ref('AIzaSyCOiu2qXfWwA5HaeA41VBaUtgEPR0tXqCc');
-                const firebaseConfig = ref(JSON.stringify({
-                  "apiKey": "AIzaSyAAE1xLB4j_dbO1OLhsgiYPQPzTbcC2gMA",
-                  "authDomain": "przygoda-ai-gra.firebaseapp.com",
-                  "projectId": "przygoda-ai-gra",
-                  "storageBucket": "przygoda-ai-gra.firebasestorage.app",
-                  "messagingSenderId": "623964248239",
-                  "appId": "1:623964248239:web:3df90f386c779c86665c5a",
-                  "measurementId": "G-7RESN474ZL"
-                }));
+                const apiKey = ref(localStorage.getItem('mpApiKey') || '');
+                const firebaseConfig = ref(localStorage.getItem('mpFirebaseConfig') || '');
                 const sessionToJoin = ref('');
                 const sessionId = ref(null);
                 const error = ref('');
@@ -217,6 +220,13 @@ Przykład aktualizacji Dziennika:
                     if (!session.value || isAITurn.value) return false;
                     const lastAiTimestamp = session.value.lastAIUpdate?.toMillis() || 0;
                     return session.value.chatHistory.some(m => m.role === 'user' && m.timestamp > lastAiTimestamp);
+                });
+
+                // --- Watchers ---
+                watch(apiKey, (newVal) => localStorage.setItem('mpApiKey', newVal));
+                watch(firebaseConfig, (newVal) => {
+                    localStorage.setItem('mpFirebaseConfig', newVal);
+                    initializeFirebase();
                 });
 
                 // --- Firebase Initialization ---
@@ -277,8 +287,8 @@ Przykład aktualizacji Dziennika:
                 }
 
                 async function createNewGame() {
-                    if (!isReady.value) {
-                        error.value = "Problem z połączeniem z serwerem gry.";
+                    if (!isReady.value || !apiKey.value) {
+                        error.value = "Sprawdź konfigurację Firebase i klucz API.";
                         return;
                     }
                     error.value = '';
@@ -294,8 +304,8 @@ Przykład aktualizacji Dziennika:
                 }
 
                 async function joinGame() {
-                    if (!isReady.value || !sessionToJoin.value) {
-                        error.value = "Sprawdź kod sesji i połączenie z serwerem.";
+                    if (!isReady.value || !apiKey.value || !sessionToJoin.value) {
+                        error.value = "Sprawdź kod sesji, konfigurację Firebase i klucz API.";
                         return;
                     }
                     error.value = '';
