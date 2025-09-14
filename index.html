@@ -382,7 +382,19 @@ Przykład aktualizacji Dziennika:
                              method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
                         });
 
-                        if (!response.ok) throw new Error(`Błąd API: ${response.statusText}`);
+                        if (!response.ok) {
+                            let errorDetails = `Błąd API: ${response.status}`;
+                            try {
+                                const errorData = await response.json();
+                                if (errorData.error && errorData.error.message) {
+                                    errorDetails = `Błąd API: ${errorData.error.message}`;
+                                }
+                            } catch (e) {
+                                errorDetails = `Błąd API: ${response.status} ${response.statusText}`;
+                            }
+                            throw new Error(errorDetails);
+                        }
+
                         const result = await response.json();
                         let aiText = result.candidates?.[0]?.content?.parts?.[0]?.text || "Coś poszło nie tak...";
 
@@ -403,20 +415,18 @@ Przykład aktualizacji Dziennika:
                             chatHistory: arrayUnion({ role: 'model', parts: [{ text: aiText }], timestamp: Date.now() }),
                             lastAIUpdate: serverTimestamp()
                         });
-
+                        
                         // Process journal updates
+                        // This part is simplified; a more robust solution would handle this better
                         updates.forEach(update => {
                             const { type, data } = update;
-                            let currentJournal = session.value.journal;
                             if (type === 'player_stats') {
-                                let players = session.value.players;
+                                let players = [...session.value.players];
                                 const playerIndex = players.findIndex(p => p.name === data.name);
                                 if (playerIndex !== -1) {
                                     Object.assign(players[playerIndex], data);
                                     batch.update(sessionRef, { players: players });
                                 }
-                            } else {
-                                // Logic for characters, plot, locations
                             }
                         });
                         
