@@ -186,7 +186,7 @@
                                     }
                                 } catch (authError) {
                                     console.error("Auth Error:", authError);
-                                    error.value = "Błąd autoryzacji.";
+                                    error.value = "Błąd autoryzacji. Sprawdź połączenie i odśwież stronę.";
                                     isAuthReady.value = true; // Allow user to see the error
                                 }
                             }
@@ -211,13 +211,19 @@
                 }
 
                 async function createNewGame() {
-                    if (!user.value || !apiKey.value) {
-                        error.value = "Musisz być zalogowany i podać klucz API.";
+                    if (!apiKey.value) {
+                        error.value = "Musisz podać klucz API.";
                         return;
                     }
+                    if (!user.value) {
+                        if (!error.value) {
+                            error.value = "Błąd autoryzacji. Spróbuj odświeżyć stronę.";
+                        }
+                        return;
+                    }
+                    error.value = ''; // Clear previous errors
                     localStorage.setItem('mpApiKey', apiKey.value);
-                    const newSessionId = collection(db, "sessions")._path.root + Math.random().toString(36).substring(2, 8).toUpperCase();
-                    sessionId.value = newSessionId;
+                    const newSessionId = 'SESSION-' + Math.random().toString(36).substring(2, 8).toUpperCase();
                     
                     const sessionRef = doc(db, `/artifacts/${appId}/public/data/mp_adventures`, newSessionId);
                     
@@ -240,10 +246,17 @@
                          error.value = "Wpisz kod sesji.";
                          return;
                     }
-                     if (!apiKey.value) {
+                    if (!apiKey.value) {
                         error.value = "Musisz podać klucz API.";
                         return;
                     }
+                    if (!user.value) {
+                        if (!error.value) {
+                            error.value = "Błąd autoryzacji. Spróbuj odświeżyć stronę.";
+                        }
+                        return;
+                    }
+                    error.value = ''; // Clear previous errors
                     localStorage.setItem('mpApiKey', apiKey.value);
                     joinSession(sessionToJoin.value.toUpperCase());
                 }
@@ -251,16 +264,15 @@
                 function joinSession(id) {
                     if (unsubscribe) unsubscribe(); // Unsubscribe from previous listener if any
                     
+                    sessionId.value = id;
                     const sessionRef = doc(db, `/artifacts/${appId}/public/data/mp_adventures`, id);
                     
                     unsubscribe = onSnapshot(sessionRef, (docSnap) => {
                         if (docSnap.exists()) {
                             session.value = docSnap.data();
-                            sessionId.value = id;
                             gameState.value = session.value.gameState;
                             error.value = '';
                             
-                            // Scroll to bottom on new messages
                             if (gameState.value === 'playing') {
                                 nextTick(() => {
                                    if (storyContainer.value) {
