@@ -34,13 +34,17 @@
             <h1 class="text-4xl sm:text-5xl font-cinzel text-yellow-300 mb-4 text-center">Wieloosobowa Przygoda AI</h1>
             <p class="text-violet-300 mb-8 text-center">Stwórzcie wspólnie swoją historię.</p>
             <div class="w-full max-w-sm p-8 bg-gray-800 rounded-lg shadow-xl space-y-6">
-                <button @click="createNewGame" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg transition-transform transform hover:scale-105">Stwórz Nową Grę</button>
+                <button @click="createNewGame" :disabled="!isAuthReady" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg transition-all transform hover:scale-105" :class="{'opacity-50 cursor-not-allowed': !isAuthReady}">
+                    {{ isAuthReady ? 'Stwórz Nową Grę' : 'Łączenie...' }}
+                </button>
                 <div class="relative flex py-5 items-center">
                     <div class="flex-grow border-t border-gray-600"></div><span class="flex-shrink mx-4 text-gray-400">LUB</span><div class="flex-grow border-t border-gray-600"></div>
                 </div>
                 <div class="space-y-2">
                     <input type="text" v-model="sessionToJoin" placeholder="Wpisz kod sesji..." class="w-full bg-gray-700 text-gray-200 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-violet-400">
-                    <button @click="joinGame" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-lg transition-transform transform hover:scale-105">Dołącz do Gry</button>
+                    <button @click="joinGame" :disabled="!isAuthReady" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-lg transition-all transform hover:scale-105" :class="{'opacity-50 cursor-not-allowed': !isAuthReady}">
+                         {{ isAuthReady ? 'Dołącz do Gry' : 'Łączenie...' }}
+                    </button>
                 </div>
                  <div class="pt-4">
                     <label for="api-key-input" class="block text-sm font-medium text-gray-400 mb-1">Klucz API Gemini</label>
@@ -144,6 +148,7 @@
                 const userInput = ref('');
                 const storyContainer = ref(null);
                 const isAITurn = ref(false);
+                const isAuthReady = ref(false);
                 let unsubscribe = null; // To store the onSnapshot listener
 
                 // Firebase Refs
@@ -171,11 +176,18 @@
                         onAuthStateChanged(auth, async (currentUser) => {
                             if (currentUser) {
                                 user.value = currentUser;
+                                isAuthReady.value = true;
                             } else {
-                                if (typeof __initial_auth_token !== 'undefined') {
-                                    await signInWithCustomToken(auth, __initial_auth_token);
-                                } else {
-                                    await signInAnonymously(auth);
+                                try {
+                                    if (typeof __initial_auth_token !== 'undefined') {
+                                        await signInWithCustomToken(auth, __initial_auth_token);
+                                    } else {
+                                        await signInAnonymously(auth);
+                                    }
+                                } catch (authError) {
+                                    console.error("Auth Error:", authError);
+                                    error.value = "Błąd autoryzacji.";
+                                    isAuthReady.value = true; // Allow user to see the error
                                 }
                             }
                         });
@@ -363,6 +375,7 @@
                     charCreation,
                     userInput,
                     isAITurn,
+                    isAuthReady,
                     playerCharacter,
                     isHost,
                     storyContainer,
@@ -383,3 +396,4 @@
     </script>
 </body>
 </html>
+
