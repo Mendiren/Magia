@@ -16,7 +16,7 @@
         #story-container::-webkit-scrollbar-thumb { background: #718096; border-radius: 4px; }
         #story-container::-webkit-scrollbar-thumb:hover { background: #a0aec0; }
         .ai-message { background-color: rgba(255, 255, 255, 0.05); border-left: 2px solid #a78bfa; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; }
-        .user-message { border-radius: 0.5rem; margin-bottom: 1rem; padding: 1rem; }
+        .user-message { border-radius: 0.5rem; margin-bottom: 1rem; padding: 1rem; background-color: rgba(0,0,0,0.2); }
         .loader { width: 48px; height: 48px; border: 5px solid #FFF; border-bottom-color: #a78bfa; border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; }
         @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .modal { transition: opacity 0.25s ease; }
@@ -34,29 +34,36 @@
             <h1 class="text-4xl sm:text-5xl font-cinzel text-yellow-300 mb-4 text-center">Wieloosobowa Przygoda AI</h1>
             <p class="text-violet-300 mb-8 text-center">Stwórzcie wspólnie swoją historię.</p>
             <div class="w-full max-w-sm p-8 bg-gray-800 rounded-lg shadow-xl space-y-6">
-                <button @click="createNewGame" :disabled="!isAuthReady" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg transition-all transform hover:scale-105" :class="{'opacity-50 cursor-not-allowed': !isAuthReady}">
-                    {{ isAuthReady ? 'Stwórz Nową Grę' : 'Łączenie...' }}
+                <button @click="createNewGame" :disabled="!isReady" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg transition-all transform hover:scale-105" :class="{'opacity-50 cursor-not-allowed': !isReady}">
+                    {{ isReady ? 'Stwórz Nową Grę' : 'Łączenie...' }}
                 </button>
                 <div class="relative flex py-5 items-center">
                     <div class="flex-grow border-t border-gray-600"></div><span class="flex-shrink mx-4 text-gray-400">LUB</span><div class="flex-grow border-t border-gray-600"></div>
                 </div>
                 <div class="space-y-2">
                     <input type="text" v-model="sessionToJoin" placeholder="Wpisz kod sesji..." class="w-full bg-gray-700 text-gray-200 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-violet-400">
-                    <button @click="joinGame" :disabled="!isAuthReady" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-lg transition-all transform hover:scale-105" :class="{'opacity-50 cursor-not-allowed': !isAuthReady}">
-                         {{ isAuthReady ? 'Dołącz do Gry' : 'Łączenie...' }}
+                    <button @click="joinGame" :disabled="!isReady" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-lg transition-all transform hover:scale-105" :class="{'opacity-50 cursor-not-allowed': !isReady}">
+                         {{ isReady ? 'Dołącz do Gry' : 'Łączenie...' }}
                     </button>
                 </div>
-                 <div class="pt-4">
-                    <label for="api-key-input" class="block text-sm font-medium text-gray-400 mb-1">Klucz API Gemini</label>
+                 <div class="pt-4 space-y-2">
+                    <label for="api-key-input" class="block text-sm font-medium text-gray-400">Klucz API Gemini</label>
                     <input type="password" id="api-key-input" v-model="apiKey" placeholder="Wprowadź klucz API..." class="w-full bg-gray-700 text-gray-200 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-violet-400">
+                    <details class="text-sm">
+                        <summary class="cursor-pointer text-violet-300">Konfiguracja Firebase</summary>
+                        <div class="p-2 bg-gray-900/50 rounded-md mt-2 space-y-2">
+                            <textarea v-model="firebaseConfig" rows="4" placeholder="Wklej tutaj JSON konfiguracji Firebase..." class="w-full text-xs bg-gray-700 rounded p-1"></textarea>
+                             <p class="text-xs text-gray-400">Potrzebne, aby gra mogła zapisywać postępy online.</p>
+                        </div>
+                    </details>
                 </div>
             </div>
-            <p v-if="error" class="text-red-400 mt-4">{{ error }}</p>
+            <p v-if="error" class="text-red-400 mt-4 text-center">{{ error }}</p>
         </div>
 
         <!-- Character Creation Screen -->
         <div v-else-if="gameState === 'character_creation'" class="flex flex-col items-center justify-center h-full">
-            <h2 class="text-3xl font-cinzel text-yellow-300 mb-2">Kod Sesji: <span class="text-white font-sans tracking-widest bg-gray-700 px-2 py-1 rounded">{{ sessionId }}</span></h2>
+            <h2 class="text-3xl font-cinzel text-yellow-300 mb-2">Kod Sesji: <span @click="copySessionId" class="cursor-pointer text-white font-sans tracking-widest bg-gray-700 px-2 py-1 rounded hover:bg-gray-600">{{ sessionId }}</span></h2>
             <p class="text-violet-300 mb-6">Udostępnij ten kod znajomym, aby dołączyli.</p>
             
             <div class="w-full max-w-lg p-6 bg-gray-800 rounded-lg shadow-xl">
@@ -87,18 +94,18 @@
              <header class="text-center py-2 sm:py-4 border-b-2 border-violet-400 mb-4 flex justify-between items-center">
                 <div class="text-left">
                     <p class="text-sm text-gray-400">Kod Sesji</p>
-                    <p class="font-bold tracking-widest">{{ sessionId }}</p>
+                    <p @click="copySessionId" class="cursor-pointer font-bold tracking-widest hover:text-yellow-300">{{ sessionId }}</p>
                 </div>
                 <div>
                     <h1 class="text-2xl sm:text-4xl font-cinzel text-yellow-300">Wieloosobowa Przygoda AI</h1>
                 </div>
-                <button @click="openJournal" class="bg-violet-600 hover:bg-violet-700 text-white font-bold py-2 px-3 rounded-lg transition-colors duration-300 text-sm">Dziennik</button>
+                <button @click="isJournalOpen = true" class="bg-violet-600 hover:bg-violet-700 text-white font-bold py-2 px-3 rounded-lg transition-colors duration-300 text-sm">Dziennik</button>
             </header>
 
             <main ref="storyContainer" class="flex-1 overflow-y-auto p-4 bg-gray-800 rounded-lg shadow-inner">
-                 <div v-for="entry in session.chatHistory" :key="entry.timestamp">
+                 <div v-for="(entry, index) in session.chatHistory" :key="index">
                      <div v-if="entry.role === 'model'" class="ai-message" v-html="formatMessage(entry.parts[0].text)"></div>
-                     <div v-else class="user-message" :style="{ borderColor: getPlayerColor(entry.uid) }">
+                     <div v-else class="user-message" :style="{ borderLeft: `3px solid ${getPlayerColor(entry.uid)}` }">
                          <p class="font-bold mb-1" :style="{ color: getPlayerColor(entry.uid) }">{{ entry.playerName }} {{ entry.actionType }}:</p>
                          <p class="whitespace-pre-wrap">{{ entry.parts[0].text }}</p>
                      </div>
@@ -108,7 +115,7 @@
             <footer class="mt-4">
                 <div v-if="isAITurn" class="text-center mb-2"><div class="loader mx-auto"></div><p class="text-violet-300 mt-2">AI tworzy dalszy ciąg historii...</p></div>
                 <div v-else>
-                     <button @click="callAI" class="w-full mb-2 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Kontynuuj Historię</button>
+                     <button @click="callAI" :disabled="!isReadyToContinue" class="w-full mb-2 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg" :class="{'opacity-50 cursor-not-allowed': !isReadyToContinue}">Kontynuuj Historię</button>
                     <div class="flex flex-col sm:flex-row items-center bg-gray-800 p-2 rounded-lg shadow-lg">
                         <input type="text" v-model="userInput" @keydown.enter="sendAction('Robię')" placeholder="Wpisz swoją akcję..." class="w-full bg-gray-700 text-gray-200 rounded-md sm:rounded-l-md sm:rounded-r-none p-3 focus:outline-none focus:ring-2 focus:ring-violet-400 transition mb-2 sm:mb-0">
                         <div class="flex w-full sm:w-auto">
@@ -121,24 +128,74 @@
             </footer>
         </div>
 
+        <!-- Journal Modal -->
+        <div v-if="isJournalOpen" class="modal fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+            <div class="modal-content bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+                <div class="flex justify-between items-center p-4 border-b border-gray-700"><h2 class="text-2xl font-cinzel text-yellow-300">Dziennik</h2><button @click="isJournalOpen = false" class="text-gray-400 hover:text-white text-3xl">&times;</button></div>
+                <div class="border-b border-gray-700 flex">
+                    <button @click="activeTab = 'team'" class="tab-btn flex-1 p-4 border-b-2" :class="{'active': activeTab === 'team'}">Drużyna</button>
+                    <button @click="activeTab = 'characters'" class="tab-btn flex-1 p-4 border-b-2" :class="{'active': activeTab === 'characters'}">Postacie</button>
+                    <button @click="activeTab = 'plot'" class="tab-btn flex-1 p-4 border-b-2" :class="{'active': activeTab === 'plot'}">Fabuła</button>
+                    <button @click="activeTab = 'locations'" class="tab-btn flex-1 p-4 border-b-2" :class="{'active': activeTab === 'locations'}">Lokacje</button>
+                </div>
+                <div class="p-6 overflow-y-auto">
+                    <div v-if="activeTab === 'team'">
+                        <div v-for="player in session.players" :key="player.uid" class="mb-4 pb-4 border-b border-gray-700">
+                            <h3 class="text-xl text-yellow-300">{{ player.name }}</h3>
+                            <p class="text-violet-300">Tytuł: {{ player.title }}</p>
+                            <p>Poziom Mocy: <strong class="text-white">{{ player.power }}</strong></p>
+                            <p class="text-sm text-gray-400 mt-1">{{ player.description }}</p>
+                        </div>
+                    </div>
+                    <div v-if="activeTab === 'characters'" v-html="renderJournalTab(session.journal.characters, 'Brak napotkanych postaci.')"></div>
+                    <div v-if="activeTab === 'plot'" v-html="renderJournalTab(session.journal.plotPoints, 'Brak kluczowych punktów fabuły.')"></div>
+                    <div v-if="activeTab === 'locations'" v-html="renderJournalTab(session.journal.locations, 'Brak odkrytych lokacji.')"></div>
+                </div>
+            </div>
+        </div>
     </div>
     
-    <!-- Journal Modal will be implemented later -->
-
-    <!-- Firebase and Vue.js scripts -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, updateDoc, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { initializeApp, deleteApp, getApps } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, updateDoc, arrayUnion, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const { createApp, ref, onMounted, computed, nextTick } = Vue;
+        const { createApp, ref, onMounted, computed, nextTick, watch } = Vue;
+        
+        // --- AI Configuration ---
+        const systemPrompt = `Jesteś Mistrzem Gry w interaktywnej, wieloosobowej grze przygodowej fantasy w stylu anime. Prowadzisz historię dla grupy do 3 graczy. Twoim zadaniem jest dynamiczne tworzenie narracji na podstawie ich wspólnych i indywidualnych akcji, opisywanie świata, postaci i potworów. Utrzymuj ton epickiej przygody.
+
+Hierarchia Mocy w Świecie:
+- 15-latkowie mają moc od 1 do 50. Wynik powyżej 50 jest wyjątkowy.
+- Królewska akademia rekrutuje od 50 mocy. Prestiżowe akademie od 25. Słabsze biorą każdego.
+- Zwykli dorośli, którzy nie trenują magii, rzadko przekraczają 100 mocy.
+- Absolwenci słabych akademii osiągają do 200, prestiżowych do 300, a królewskiej nawet 400.
+- Doświadczeni magowie i poszukiwacze przygód osiągają 500-550.
+- SEKRETNA PIĄTKA MAGÓW, absolwenci królewskiej akademii, mają moc ok. 700, a lider prawie 800.
+- Maksymalna moc to 1000. Historyczny rekord to 899. Nikt nigdy nie osiągnął 900.
+
+Twoje Zadania:
+1.  **Analizuj Akcje Graczy:** Bierz pod uwagę wszystkie nowe akcje od ostatniej tury. Stwórz spójną odpowiedź, która uwzględnia działania wszystkich.
+2.  **Aktualizuj Dziennik:** Gdy w narracji pojawi się nowa postać, lokacja, ważny punkt fabuły lub zmienią się statystyki gracza, DODAJ na końcu swojej odpowiedzi specjalny blok JSON: \`[JOURNAL_UPDATE]{"type": "...", "data": {...}}[/JOURNAL_UPDATE]\`. Możesz dodać wiele bloków.
+    -   **Typy:** "character", "plot", "location", "player_stats".
+    -   **Inteligentne Łączenie:** Jeśli postać jest już w dzienniku (np. "Matka Rena" i "Lira"), zaktualizuj istniejący wpis, a nie twórz nowego. To samo dotyczy lokacji.
+    -   **Statystyki Gracza:** Aktualizuj moc i tytuł graczy, gdy na to zasłużą. Używaj pola "name" do identyfikacji gracza.
+3.  **Nie Pokazuj Myśli:** Nigdy nie pisz swoich myśli ani planów (np. "[THOUGHT]:..."). Odpowiadaj tylko jako narrator.
+4.  **Prowadź Fabułę:** Zawsze kończ swoją odpowiedź, stawiając graczy w sytuacji wymagającej reakcji.
+
+Przykład aktualizacji Dziennika:
+[JOURNAL_UPDATE]{"type":"character","data":{"name":"Elara","description":"Przyjaciółka graczy.","relation":"Sojusznik","power":55,"title":"Kandydatka do Akademii Królewskiej"}}[/JOURNAL_UPDATE]
+[JOURNAL_UPDATE]{"type":"player_stats","data":{"name":"Ren","power":12,"title":"Obudzony talent"}}[/JOURNAL_UPDATE]
+`;
+
 
         const app = createApp({
             setup() {
                 // State
-                const gameState = ref('session'); // session, character_creation, playing
+                const gameState = ref('session');
                 const apiKey = ref(localStorage.getItem('mpApiKey') || '');
+                const firebaseConfig = ref(localStorage.getItem('mpFirebaseConfig') || '');
                 const sessionToJoin = ref('');
                 const sessionId = ref(null);
                 const error = ref('');
@@ -149,261 +206,247 @@
                 const storyContainer = ref(null);
                 const isAITurn = ref(false);
                 const isAuthReady = ref(false);
-                let unsubscribe = null; // To store the onSnapshot listener
+                const isJournalOpen = ref(false);
+                const activeTab = ref('team');
+                let unsubscribe = null;
+                let auth, db, firebaseApp;
+                const appId = 'default-app-id';
 
-                // Firebase Refs
-                let auth, db;
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                // --- Computed Properties ---
+                const isReady = computed(() => isAuthReady.value && db);
+                const playerCharacter = computed(() => session.value?.players.find(p => p.uid === user.value?.uid) || {});
+                const isHost = computed(() => session.value?.host === user.value?.uid);
+                const isReadyToContinue = computed(() => {
+                    if (!session.value || isAITurn.value) return false;
+                    const lastAiTimestamp = session.value.lastAIUpdate?.toMillis() || 0;
+                    return session.value.chatHistory.some(m => m.role === 'user' && m.timestamp > lastAiTimestamp);
+                });
 
-                // Computed Properties
-                const playerCharacter = computed(() => {
-                    if (!user.value || !session.value?.players) return {};
-                    return session.value.players.find(p => p.uid === user.value.uid) || {};
+                // --- Watchers ---
+                watch(apiKey, (newVal) => localStorage.setItem('mpApiKey', newVal));
+                watch(firebaseConfig, (newVal) => {
+                    localStorage.setItem('mpFirebaseConfig', newVal);
+                    initializeFirebase();
                 });
-                const isHost = computed(() => {
-                    if (!user.value || !session.value?.host) return false;
-                    return session.value.host === user.value.uid;
-                });
-                
-                // --- Lifecycle ---
-                onMounted(async () => {
+
+                // --- Firebase Initialization ---
+                function initializeFirebase() {
+                    if (getApps().length > 0) {
+                        deleteApp(getApps()[0]);
+                    }
+                     isAuthReady.value = false;
+                     db = null;
+
                     try {
-                        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-                        const firebaseApp = initializeApp(firebaseConfig);
+                        const config = JSON.parse(firebaseConfig.value || '{}');
+                        if (!config.apiKey) {
+                            error.value = "Konfiguracja Firebase jest niekompletna.";
+                            return;
+                        }
+                        firebaseApp = initializeApp(config);
                         db = getFirestore(firebaseApp);
                         auth = getAuth(firebaseApp);
                         
-                        onAuthStateChanged(auth, async (currentUser) => {
+                        onAuthStateChanged(auth, (currentUser) => {
                             if (currentUser) {
                                 user.value = currentUser;
-                                isAuthReady.value = true;
                             } else {
-                                try {
-                                    if (typeof __initial_auth_token !== 'undefined') {
-                                        await signInWithCustomToken(auth, __initial_auth_token);
-                                    } else {
-                                        await signInAnonymously(auth);
-                                    }
-                                } catch (authError) {
-                                    console.error("Auth Error:", authError);
-                                    error.value = "Błąd autoryzacji. Sprawdź połączenie i odśwież stronę.";
-                                    isAuthReady.value = true; // Allow user to see the error
-                                }
+                                signInAnonymously(auth).catch(e => {
+                                    console.error("Anon Auth Error:", e);
+                                    error.value = "Błąd anonimowej autoryzacji.";
+                                });
                             }
+                            isAuthReady.value = true;
+                             error.value = '';
                         });
-
-                    } catch(e) {
+                    } catch (e) {
                         console.error("Firebase Init Error:", e);
-                        error.value = "Nie udało się połączyć z serwerem gry.";
+                        error.value = "Błąd konfiguracji Firebase. Sprawdź, czy wklejony JSON jest poprawny.";
+                        isAuthReady.value = true;
                     }
-                });
+                }
+
+                onMounted(initializeFirebase);
 
                 // --- Methods ---
+                function copySessionId() {
+                    navigator.clipboard.writeText(sessionId.value).then(() => {
+                        alert('Skopiowano kod sesji!');
+                    });
+                }
+                
                 function getPlayerColor(uid) {
                     const colors = ['#34D399', '#FBBF24', '#F87171'];
                     if (!session.value?.players) return '#FFFFFF';
                     const index = session.value.players.findIndex(p => p.uid === uid);
-                    return colors[index % colors.length];
+                    return colors[index % colors.length] || '#FFFFFF';
                 }
 
                 function formatMessage(text) {
-                     return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                     return text ? text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') : '';
                 }
 
                 async function createNewGame() {
-                    if (!apiKey.value) {
-                        error.value = "Musisz podać klucz API.";
+                    if (!isReady.value || !apiKey.value) {
+                        error.value = "Sprawdź konfigurację Firebase i klucz API.";
                         return;
                     }
-                    if (!user.value) {
-                        if (!error.value) {
-                            error.value = "Błąd autoryzacji. Spróbuj odświeżyć stronę.";
-                        }
-                        return;
-                    }
-                    error.value = ''; // Clear previous errors
-                    localStorage.setItem('mpApiKey', apiKey.value);
-                    const newSessionId = 'SESSION-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-                    
-                    const sessionRef = doc(db, `/artifacts/${appId}/public/data/mp_adventures`, newSessionId);
-                    
-                    const newSessionData = {
-                        host: user.value.uid,
-                        players: [],
-                        chatHistory: [],
+                    error.value = '';
+                    const newSessionId = 'SESH-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+                    const sessionRef = doc(db, `mp_adventures/${newSessionId}`);
+                    await setDoc(sessionRef, {
+                        host: user.value.uid, players: [], chatHistory: [], 
                         journal: { characters: [], plotPoints: [], locations: [] },
-                        gameState: 'character_creation',
-                        createdAt: serverTimestamp(),
+                        gameState: 'character_creation', createdAt: serverTimestamp(),
                         lastAIUpdate: null,
-                    };
-
-                    await setDoc(sessionRef, newSessionData);
+                    });
                     joinSession(newSessionId);
                 }
 
                 async function joinGame() {
-                    if (!sessionToJoin.value) {
-                         error.value = "Wpisz kod sesji.";
-                         return;
-                    }
-                    if (!apiKey.value) {
-                        error.value = "Musisz podać klucz API.";
+                    if (!isReady.value || !apiKey.value || !sessionToJoin.value) {
+                        error.value = "Sprawdź kod sesji, konfigurację Firebase i klucz API.";
                         return;
                     }
-                    if (!user.value) {
-                        if (!error.value) {
-                            error.value = "Błąd autoryzacji. Spróbuj odświeżyć stronę.";
-                        }
-                        return;
-                    }
-                    error.value = ''; // Clear previous errors
-                    localStorage.setItem('mpApiKey', apiKey.value);
+                    error.value = '';
                     joinSession(sessionToJoin.value.toUpperCase());
                 }
 
                 function joinSession(id) {
-                    if (unsubscribe) unsubscribe(); // Unsubscribe from previous listener if any
-                    
+                    if (unsubscribe) unsubscribe();
                     sessionId.value = id;
-                    const sessionRef = doc(db, `/artifacts/${appId}/public/data/mp_adventures`, id);
-                    
+                    const sessionRef = doc(db, `mp_adventures/${id}`);
                     unsubscribe = onSnapshot(sessionRef, (docSnap) => {
                         if (docSnap.exists()) {
                             session.value = docSnap.data();
                             gameState.value = session.value.gameState;
                             error.value = '';
-                            
                             if (gameState.value === 'playing') {
-                                nextTick(() => {
-                                   if (storyContainer.value) {
-                                       storyContainer.value.scrollTop = storyContainer.value.scrollHeight;
-                                   }
-                                });
+                                nextTick(() => { if (storyContainer.value) storyContainer.value.scrollTop = storyContainer.value.scrollHeight; });
                             }
                         } else {
                             error.value = "Nie znaleziono sesji o takim kodzie.";
-                            unsubscribe();
+                            if(unsubscribe) unsubscribe();
                         }
-                    }, (err) => {
-                        console.error("Snapshot error:", err);
-                        error.value = "Błąd połączenia z sesją.";
                     });
                 }
                 
                 async function createCharacter() {
-                    if (!charCreation.value.name || !charCreation.value.description) {
-                        error.value = "Imię i opis nie mogą być puste.";
-                        return;
-                    }
-                    if (session.value.players.length >= 3) {
-                         error.value = "Sesja jest już pełna.";
-                         return;
-                    }
-
+                    if (!charCreation.value.name || !charCreation.value.description) return;
+                    if (session.value.players.length >= 3) { error.value = "Sesja jest już pełna."; return; }
                     const newPlayer = {
-                        uid: user.value.uid,
-                        name: charCreation.value.name,
-                        description: charCreation.value.description,
-                        power: Math.floor(Math.random() * 50) + 1,
-                        title: 'Nieobudzony'
+                        uid: user.value.uid, name: charCreation.value.name, description: charCreation.value.description,
+                        power: Math.floor(Math.random() * 50) + 1, title: 'Nieobudzony'
                     };
-                    
-                    const sessionRef = doc(db, `/artifacts/${appId}/public/data/mp_adventures`, sessionId.value);
-                    await updateDoc(sessionRef, {
-                        players: arrayUnion(newPlayer)
-                    });
+                    const sessionRef = doc(db, `mp_adventures/${sessionId.value}`);
+                    await updateDoc(sessionRef, { players: arrayUnion(newPlayer) });
                 }
                 
                 async function startGame() {
-                    const sessionRef = doc(db, `/artifacts/${appId}/public/data/mp_adventures`, sessionId.value);
-                    
                     let initialStory = "Rozpoczynacie swoją przygodę. Jesteście grupą 15-latków, którzy po raz pierwszy stają przed magiczną kulą, aby poznać swoją moc.\n";
                     session.value.players.forEach(p => {
                         initialStory += `\n**${p.name}**, ${p.description}, podchodzi do kuli. Jej moc to **${p.power}**, a tytuł to **'${p.title}'**.`
                     });
                     initialStory += "\n\nStary Mag, opiekun kuli, uśmiecha się do was. 'Każda wielka podróż zaczyna się od pierwszego kroku. Co teraz zrobicie?'"
-
+                    const sessionRef = doc(db, `mp_adventures/${sessionId.value}`);
                     await updateDoc(sessionRef, {
                         gameState: 'playing',
-                        chatHistory: arrayUnion({
-                            role: 'model',
-                            parts: [{ text: initialStory }],
-                            timestamp: Date.now()
-                        })
+                        chatHistory: arrayUnion({ role: 'model', parts: [{ text: initialStory }], timestamp: Date.now() }),
+                        lastAIUpdate: serverTimestamp()
                     });
                 }
                 
                 async function sendAction(actionType) {
                     if (!userInput.value.trim()) return;
-                    const sessionRef = doc(db, `/artifacts/${appId}/public/data/mp_adventures`, sessionId.value);
-                    
+                    const sessionRef = doc(db, `mp_adventures/${sessionId.value}`);
                     await updateDoc(sessionRef, {
                         chatHistory: arrayUnion({
-                            role: 'user',
-                            uid: user.value.uid,
-                            playerName: playerCharacter.value.name,
-                            actionType: actionType,
-                            parts: [{ text: userInput.value.trim() }],
-                            timestamp: Date.now()
+                            role: 'user', uid: user.value.uid, playerName: playerCharacter.value.name,
+                            actionType: actionType, parts: [{ text: userInput.value.trim() }], timestamp: Date.now()
                         })
                     });
                     userInput.value = '';
                 }
 
                 async function callAI() {
-                    // TODO: Implement AI call logic
-                    // 1. Get last AI message timestamp from session.lastAIUpdate
-                    // 2. Filter chatHistory for user messages after that timestamp
-                    // 3. Construct a prompt for the AI
-                    // 4. Call Gemini API
-                    // 5. Update chatHistory and session.lastAIUpdate in Firestore
-                     addMessageToStory("Funkcja AI jest w trakcie implementacji!", 'model');
-                }
-                
-                function openJournal() {
-                    alert("Dziennik jest w trakcie implementacji!");
-                }
-                
-                 function addMessageToStory(text, role) {
-                     const sessionRef = doc(db, `/artifacts/${appId}/public/data/mp_adventures`, sessionId.value);
-                     updateDoc(sessionRef, {
-                         chatHistory: arrayUnion({
-                             role: role,
-                             parts: [{ text: text }],
-                             timestamp: Date.now()
-                         })
-                     });
-                 }
+                    isAITurn.value = true;
+                    try {
+                        const lastAiTimestamp = session.value.lastAIUpdate?.toMillis() || 0;
+                        const newActions = session.value.chatHistory.filter(m => m.role === 'user' && m.timestamp > lastAiTimestamp);
+                        
+                        const historyForAI = [...session.value.chatHistory];
+                        historyForAI.push({role: 'user', parts: [{text: `Oto akcje graczy: ${newActions.map(a => `${a.playerName} ${a.actionType}: ${a.parts[0].text}`).join('; ')}`}]});
 
+                        const payload = { contents: historyForAI, systemInstruction: { parts: [{ text: systemPrompt }] } };
+                        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey.value}`, {
+                             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) throw new Error(`Błąd API: ${response.statusText}`);
+                        const result = await response.json();
+                        let aiText = result.candidates?.[0]?.content?.parts?.[0]?.text || "Coś poszło nie tak...";
+
+                        const journalRegex = /\[JOURNAL_UPDATE\]([\s\S]*?)\[\/JOURNAL_UPDATE\]/g;
+                        const updates = [];
+                        aiText.match(journalRegex)?.forEach(match => {
+                             try {
+                                const jsonStr = match.replace('[JOURNAL_UPDATE]', '').replace('[/JOURNAL_UPDATE]', '');
+                                updates.push(JSON.parse(jsonStr));
+                            } catch (e) { console.error("Błąd parsowania JSON z Dziennika:", e); }
+                        });
+                        aiText = aiText.replace(journalRegex, '').trim();
+
+                        const batch = writeBatch(db);
+                        const sessionRef = doc(db, `mp_adventures/${sessionId.value}`);
+                        
+                        batch.update(sessionRef, {
+                            chatHistory: arrayUnion({ role: 'model', parts: [{ text: aiText }], timestamp: Date.now() }),
+                            lastAIUpdate: serverTimestamp()
+                        });
+
+                        // Process journal updates
+                        updates.forEach(update => {
+                            const { type, data } = update;
+                            let currentJournal = session.value.journal;
+                            if (type === 'player_stats') {
+                                let players = session.value.players;
+                                const playerIndex = players.findIndex(p => p.name === data.name);
+                                if (playerIndex !== -1) {
+                                    Object.assign(players[playerIndex], data);
+                                    batch.update(sessionRef, { players: players });
+                                }
+                            } else {
+                                // Logic for characters, plot, locations
+                            }
+                        });
+                        
+                        await batch.commit();
+
+                    } catch (err) {
+                        console.error("Błąd wywołania AI:", err);
+                        const sessionRef = doc(db, `mp_adventures/${sessionId.value}`);
+                        await updateDoc(sessionRef, {
+                            chatHistory: arrayUnion({ role: 'model', parts: [{ text: `Wystąpił błąd: ${err.message}` }], timestamp: Date.now() })
+                        });
+                    } finally {
+                        isAITurn.value = false;
+                    }
+                }
+                
+                function renderJournalTab(items, emptyMessage) {
+                    if (!items || items.length === 0) return `<p>${emptyMessage}</p>`;
+                    return items.map(item => `<div class="mb-2 pb-2 border-b border-gray-700">${item.name ? `<strong>${item.name}</strong>: ` : ''}${item.description || item.point}</div>`).join('');
+                }
 
                 return {
-                    gameState,
-                    apiKey,
-                    sessionToJoin,
-                    sessionId,
-                    error,
-                    user,
-                    session,
-                    charCreation,
-                    userInput,
-                    isAITurn,
-                    isAuthReady,
-                    playerCharacter,
-                    isHost,
-                    storyContainer,
-                    createNewGame,
-                    joinGame,
-                    createCharacter,
-                    startGame,
-                    sendAction,
-                    callAI,
-                    openJournal,
-                    getPlayerColor,
-                    formatMessage
+                    gameState, apiKey, firebaseConfig, sessionToJoin, sessionId, error, user, session,
+                    charCreation, userInput, isAITurn, isAuthReady, isJournalOpen, activeTab,
+                    playerCharacter, isHost, storyContainer, isReady, isReadyToContinue,
+                    createNewGame, joinGame, createCharacter, startGame, sendAction, callAI,
+                    getPlayerColor, formatMessage, copySessionId, renderJournalTab
                 };
             }
         });
-
         app.mount('#app');
     </script>
 </body>
