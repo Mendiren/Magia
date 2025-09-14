@@ -374,7 +374,11 @@ Przykład aktualizacji Dziennika:
                         const lastAiTimestamp = session.value.lastAIUpdate?.toMillis() || 0;
                         const newActions = session.value.chatHistory.filter(m => m.role === 'user' && m.timestamp > lastAiTimestamp);
                         
-                        const historyForAI = [...session.value.chatHistory];
+                        const historyForAI = session.value.chatHistory.map(entry => ({
+                            role: entry.role,
+                            parts: entry.parts,
+                        }));
+                        
                         historyForAI.push({role: 'user', parts: [{text: `Oto akcje graczy: ${newActions.map(a => `${a.playerName} ${a.actionType}: ${a.parts[0].text}`).join('; ')}`}]});
 
                         const payload = { contents: historyForAI, systemInstruction: { parts: [{ text: systemPrompt }] } };
